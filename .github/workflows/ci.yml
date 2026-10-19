@@ -1,0 +1,31 @@
+name: CI
+
+# Fast checks on every push / PR: unit tests that need no downloaded data or LLM.
+# The full real-data rebuild runs weekly in health_check.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: dbt parse (project compiles)
+        run: DBT_PROFILES_DIR=. dbt parse
+      - name: Unit tests
+        # test_portfolio_health.py needs the real warehouse; the weekly job runs it.
+        run: pytest --tb=short --ignore=tests/test_portfolio_health.py
