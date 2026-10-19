@@ -117,7 +117,7 @@ Python (pandas, NumPy, scikit-learn, SciPy), DuckDB, dbt-duckdb, SQL, Streamlit,
   - The guardrail was rejected at task construction because `from __future__ import annotations` turns its return annotation into a string. A test now builds the crew so this kind of wiring error fails in CI.
   - The 3B model couldn't reliably copy the cohort snapshot between tasks, and misread figures when restating them. The snapshot is now rendered from SQL.
   - A draft passed every structural check with an empty email body (all the copy was in the preview line). This is now caught by the 80-word body check.
-- **Agent runs (llama3.2, 3B):** about 2.5 minutes per segment on a laptop. See `campaigns/samples/` for committed example outputs and their guardrail status.
+- **Agent runs (llama3.2, 3B):** five rounds of real runs drove the design changes above. In the final run, both churn-risk segments passed the guardrail on the first attempt, in about 2 minutes per segment on a laptop, and both offers stayed within policy (VIP perk with no discount for Whales; 15% for Dormant, under its 20% cap). Remaining model slips are listed in `campaigns/samples/README.md`. The unedited outputs are committed alongside it.
 - **Not tested:**
   - The real Gmail send (no credentials were used here; the SMTP path is tested against a fake server).
   - The GitHub Actions workflows themselves, which run once the repo is pushed.

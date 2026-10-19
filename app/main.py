@@ -255,7 +255,8 @@ with tab2:
     b4.metric("Discount cap (policy)", f"{policy['max_discount_pct']}%")
     st.write(f"**Objective:** {policy['objective']}  \n**Preferred incentive:** {policy['preferred_incentive']}")
     st.dataframe(pd.DataFrame(brief["top_products"]).rename(columns={
-        "product": "Top products", "customers_who_bought": "Customers who bought", "revenue": "Revenue (£)"}),
+        "product": "Top products", "customers_who_bought": "Customers who bought", "revenue": "Revenue"})
+        .style.format({"Customers who bought": "{:,}", "Revenue": "£{:,.0f}"}),
         hide_index=True, use_container_width=True)
 
     try:

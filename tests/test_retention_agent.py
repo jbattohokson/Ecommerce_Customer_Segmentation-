@@ -161,6 +161,7 @@ def test_assembled_campaign_uses_data_snapshot_and_passes():
     assert doc.startswith("# Retention campaign: Dormant Buyers")
     assert "**1,950 customers**: 33.4% of active customers, 3.7% of net revenue" in doc
     assert "62% over a year ago" in doc and "Regency Cakestand 3 Tier (120 buyers)" in doc
+    assert "**Typical customer**: 1 order, £267" in doc
     assert "## Analyst notes\n\n- They bought once." in doc
     assert "Passed format and discount-policy checks" in doc
 

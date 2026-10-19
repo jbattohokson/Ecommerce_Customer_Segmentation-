@@ -319,7 +319,8 @@ def render_snapshot(brief: dict) -> str:
         f"- **{n:,} customers**: {brief['share_of_all_customers_pct']}% of active customers, "
         f"{brief['share_of_total_net_revenue_pct']}% of net revenue "
         f"(£{brief['total_net_spend_gbp']:,.0f} lifetime).",
-        f"- **Typical customer**: {brief['median_orders']:g} orders, £{brief['median_net_spend_gbp']:,.0f} "
+        f"- **Typical customer**: {brief['median_orders']:g} order{'' if brief['median_orders'] == 1 else 's'}, "
+        f"£{brief['median_net_spend_gbp']:,.0f} "
         f"net spend, £{brief['avg_order_value']:,.0f} average order, "
         f"{brief['median_days_since_last_order']:g} days since last order (median).",
         f"- **Recency spread**: {recency}.",
