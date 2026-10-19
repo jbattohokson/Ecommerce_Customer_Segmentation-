@@ -27,3 +27,8 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Generated campaign drafts (re-create with agent/retention_agent.py); samples/ is committed
+campaigns/*.md
+# CI health-check logs
+health_logs/
