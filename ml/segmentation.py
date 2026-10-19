@@ -204,7 +204,7 @@ def build_segments(rfm: pd.DataFrame, model: SegmentModel, labels: np.ndarray) -
     # Distance to own centroid: lets the app show "borderline" customers near a boundary.
     z = model.transform(out)
     out["distance_to_centroid"] = np.linalg.norm(z - model.centroids[labels], axis=1).round(4)
-    out["segmented_at"] = pd.Timestamp.now(tz="UTC").tz_localize(None)
+    out["segmented_at"] = pd.Timestamp.now()  # local time, matching the loader's loaded_at
     return out[["customer_id", "cluster_id", "segment_name", "is_churn_risk", *FEATURES,
                 "distance_to_centroid", "segmented_at"]]
 
