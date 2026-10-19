@@ -48,6 +48,9 @@ DB_PATH = Path(os.environ.get("RETAIL_DB_PATH", REPO_ROOT / "retail_analytics.du
 FEATURES = ["recency_days", "frequency", "monetary"]
 RANDOM_STATE = 42
 N_INIT = 10
+# Stored floats are rounded so reruns are byte-identical: multithreaded BLAS/OpenMP sums can
+# differ in the last bit (~1e-16 relative) between runs, which changes hashes but nothing else.
+STORE_DECIMALS = 10
 CANDIDATE_K = (4, 5, 6)
 DIAGNOSTIC_K = range(2, 9)
 SILHOUETTE_SAMPLE = 4000  # silhouette is O(n^2); a fixed sample keeps it fast and deterministic
@@ -276,8 +279,8 @@ def run_rfm_clustering(db_path: Path = DB_PATH, k: int | None = None) -> pd.Data
         write_tables(conn, {
             "dim_customer_segments": segments,
             "ml_segment_profiles": profiles,
-            "ml_k_selection": diagnostics,
-            "ml_model_params": build_model_params(model),
+            "ml_k_selection": diagnostics.round(STORE_DECIMALS),
+            "ml_model_params": build_model_params(model).round(STORE_DECIMALS),
         })
     finally:
         conn.close()
