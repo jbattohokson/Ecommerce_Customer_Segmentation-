@@ -1,0 +1,23 @@
+# Requires Python 3.13 — dbt-duckdb's dependency chain doesn't yet have
+# CPython 3.14 wheels (same constraint as ../B2B_CRM_Pipeline).
+# Install:  python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+# Data layer
+pandas>=2.0.0
+numpy>=1.26.0
+openpyxl>=3.1.0          # reads the UCI .xlsx once, in pipelines/fetch_data.py
+
+# Warehouse + transform
+duckdb>=1.0.0
+dbt-duckdb>=1.8.0
+
+# Machine learning
+scikit-learn>=1.4.0
+
+# App + local AI layer
+streamlit>=1.35.0
+plotly>=5.20.0
+crewai>=0.80.0
+
+# Testing
+pytest>=8.0.0

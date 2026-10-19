@@ -1,0 +1,29 @@
+# Raw UCI data is downloaded by pipelines/fetch_data.py — re-fetch, don't commit
+data/raw/*
+!data/raw/README.md
+
+# DuckDB database files
+*.duckdb
+*.duckdb.wal
+
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets (Gmail app password for local alert testing)
+.env
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
