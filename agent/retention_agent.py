@@ -119,7 +119,7 @@ def segment_brief(segment_name: str, top_n: int = 5) -> dict:
     top_countries = _query("""
         SELECT c.country, count(*) AS customers
         FROM marts.dim_customer_segments s JOIN marts.dim_customers c USING (customer_id)
-        WHERE s.segment_name = ? GROUP BY c.country ORDER BY customers DESC LIMIT 3""",
+        WHERE s.segment_name = ? GROUP BY c.country ORDER BY customers DESC, c.country LIMIT 3""",
         [segment_name])
 
     behaviour = _query("""
@@ -216,38 +216,38 @@ def build_crew(segment_name: str, llm: LLM) -> Crew:
 
     analysis = Task(
         description=(
-            f"Call the 'Get segment brief' tool with segment_name '{segment_name}'. Using only the "
-            "returned data, write a short cohort analysis: who these customers are, how valuable "
-            "they are (customers, revenue share, median spend and orders), how long since they "
-            "last ordered, what they buy (name the top products), and the main retention risk. Quote "
-            "durations exactly as given in days (e.g. 180 days is about six months, "
-            "not a year); do not round them up or reinterpret them."),
+            f"Call the 'Get segment brief' tool with segment_name '{segment_name}' and read the "
+            "data carefully. Then write analyst notes for the copywriter: what the data says about "
+            "why these customers might be drifting and what will resonate with them (which "
+            "products to feature, what kind of offer suits their value). The exact figures are "
+            "shown to the reader separately, so do not restate numbers; describe patterns in "
+            "words, and only make claims the data supports."),
         expected_output=(
-            "A markdown section titled '## Cohort snapshot' with 4-6 bullet points of real "
-            "figures from the tool, then one sentence naming the main retention risk."),
+            "Exactly 3 markdown bullet points of interpretation. No heading, no numbers, no code."),
         agent=analyst,
     )
 
     campaign = Task(
         description=(
-            f"Write a retention email campaign for the '{segment_name}' segment. "
-            f"Objective: {policy['objective']}. Preferred incentive: {policy['preferred_incentive']}. "
-            f"Any discount must be at most {policy['max_discount_pct']}%. Reference the segment's "
-            "actual top products by name. Keep the tone warm and specific to a retailer that "
-            "buys giftware for resale. Use the merge fields *|FNAME|* and *|SHOP|* exactly as written "
-            "(they are filled in by the email platform)."),
+            f"Write a retention email campaign for the '{segment_name}' segment, using the cohort "
+            f"analysis. Objective: {policy['objective']}. Preferred incentive: "
+            f"{policy['preferred_incentive']}. Any discount must be at most "
+            f"{policy['max_discount_pct']}%. Reference the segment's actual top products by name. "
+            "Keep the tone warm and specific to a retailer that buys giftware for resale. Use the "
+            "merge fields *|FNAME|* and *|SHOP|* exactly as written (the email platform fills them in)."),
         expected_output=(
-            "Markdown with these sections, in order: the '## Cohort snapshot' from the analysis "
-            "task; '## Campaign strategy' (objective, incentive and why, when to send relative to "
-            "today, success metric); '## Email' containing exactly two subject lines labelled "
-            "'Subject A:' and 'Subject B:', a "
-            "'Preview text:' line, and a 120-180 word email body ending with a clear call to "
-            "action; '## Follow-up' with one sentence on a reminder email for non-openers."),
+            "Markdown with exactly these three headings, in order:\n"
+            "## Campaign strategy\n(objective, incentive and why, when to send relative to today, "
+            "success metric)\n"
+            "## Email\n(a line starting 'Subject A:', a line starting 'Subject B:', a line starting "
+            "'Preview text:' (one sentence), then the email body as 120-180 words of plain "
+            "paragraphs that greet *|FNAME|* and end with a clear call to action; no code blocks)\n"
+            "## Follow-up\n(one sentence on a reminder email for non-openers)"),
         agent=analyst,
         context=[analysis],
         markdown=True,
         guardrail=make_campaign_guardrail(segment_name),
-        guardrail_max_retries=2,
+        guardrail_max_retries=GUARDRAIL_RETRIES,
     )
     return Crew(agents=[analyst], tasks=[analysis, campaign], process=Process.sequential, verbose=False)
 
@@ -266,13 +266,76 @@ def discount_violations(text: str, segment_name: str) -> list[int]:
     return sorted(p for p in offers if p > cap)
 
 
-REQUIRED_SECTIONS = ["## Cohort snapshot", "## Campaign strategy", "## Email", "## Follow-up"]
+# Sections the model writes (the cohort snapshot is assembled in Python from the analysis task).
+CAMPAIGN_SECTIONS = ["Campaign strategy", "Email", "Follow-up"]
+GUARDRAIL_RETRIES = 2
 
 
-def campaign_problems(text: str, segment_name: str) -> list[str]:
+def has_heading(text: str, title: str) -> bool:
+    """A markdown heading at any level (#..####) or a bold line, case-insensitive."""
+    pattern = rf"^\s*(?:#{{1,4}}\s*{re.escape(title)}|\*\*{re.escape(title)}:?\*\*)\s*:?\s*$"
+    return re.search(pattern, text, re.IGNORECASE | re.MULTILINE) is not None
+
+
+MIN_EMAIL_BODY_WORDS = 80
+
+
+def section_text(text: str, title: str) -> str:
+    """Text under a heading, up to the next heading of any level (empty if absent)."""
+    m = re.search(rf"^\s*(?:#{{1,4}}\s*{re.escape(title)}|\*\*{re.escape(title)}:?\*\*)\s*:?\s*$"
+                  r"(.*?)(?=^\s*#{1,4}\s|\Z)", text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    return m.group(1) if m else ""
+
+
+def email_body_words(text: str) -> int:
+    """Words in the Email section, excluding the Subject/Preview lines."""
+    lines = [ln for ln in section_text(text, "Email").splitlines()
+             if not re.match(r"\s*\**\s*(subject [ab]|preview text)\s*:?", ln, re.IGNORECASE)]
+    return len(re.findall(r"[A-Za-z0-9£%'|*]+", " ".join(lines)))
+
+
+TOOL_ECHO = re.compile(r"```(?:json)?\s*\{[^`]*?\"(?:name|tool)\"[^`]*?\}\s*```", re.DOTALL)
+MD_FENCE = re.compile(r"```(?:markdown|md|text)?\s*\n(.*?)\n?```", re.DOTALL)
+
+
+def clean_llm_markdown(text: str) -> str:
+    """Remove tool calls the model echoed as JSON, and unwrap prose it put in code fences."""
+    text = TOOL_ECHO.sub("", text)
+    text = MD_FENCE.sub(lambda m: m.group(1), text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def render_snapshot(brief: dict) -> str:
+    """The cohort facts, rendered from the warehouse rather than written by the model."""
+    products = ", ".join(f"{p['product'].title()} ({p['customers_who_bought']:,} buyers)"
+                         for p in brief["top_products"])
+    countries = ", ".join(f"{c['country']} ({c['customers']:,})" for c in brief["top_countries"])
+    n = brief["customers"]
+    bands = [("ordered in the last 90 days", "ordered_last_90d"),
+             ("last ordered 91-180 days ago", "last_order_91_180d"),
+             ("181-365 days ago", "last_order_181_365d"), ("over a year ago", "last_order_over_1y")]
+    recency = "; ".join(f"{100 * brief[k] / n:.0f}% {label}" for label, k in bands)
+    return "\n".join([
+        f"- **{n:,} customers**: {brief['share_of_all_customers_pct']}% of active customers, "
+        f"{brief['share_of_total_net_revenue_pct']}% of net revenue "
+        f"(£{brief['total_net_spend_gbp']:,.0f} lifetime).",
+        f"- **Typical customer**: {brief['median_orders']:g} orders, £{brief['median_net_spend_gbp']:,.0f} "
+        f"net spend, £{brief['avg_order_value']:,.0f} average order, "
+        f"{brief['median_days_since_last_order']:g} days since last order (median).",
+        f"- **Recency spread**: {recency}.",
+        f"- **Top products**: {products}.",
+        f"- **Return rate** {brief['avg_return_rate_pct']}% on average; **top countries**: {countries}.",
+    ])
+
+
+def campaign_problems(text: str, segment_name: str,
+                      sections: list[str] = CAMPAIGN_SECTIONS) -> list[str]:
     """Format and policy problems in a campaign draft (empty list = acceptable)."""
     lower = text.lower()
-    problems = [f"missing the '{h}' section" for h in REQUIRED_SECTIONS if h.lower() not in lower]
+    problems = [f"missing the '## {h}' section" for h in sections if not has_heading(text, h)]
+    if has_heading(text, "Email") and (n := email_body_words(text)) < MIN_EMAIL_BODY_WORDS:
+        problems.append(f"the email body has only {n} words; write 120-180 words of plain "
+                        "paragraphs after the Preview text line")
     if "subject a:" not in lower or "subject b:" not in lower:
         problems.append("needs exactly two subject lines labelled 'Subject A:' and 'Subject B:'")
     if "*|fname|*" not in lower:
@@ -283,38 +346,53 @@ def campaign_problems(text: str, segment_name: str) -> list[str]:
     return problems
 
 
-def make_campaign_guardrail(segment_name: str):
-    """CrewAI task guardrail: on failure the agent gets the problems back and retries."""
+def make_campaign_guardrail(segment_name: str, retries: int = GUARDRAIL_RETRIES):
+    """CrewAI task guardrail: failing drafts go back to the agent with the problems listed.
+
+    After `retries` rejections the last draft is accepted anyway, so the user still gets a
+    draft to edit; generate_retention_campaign re-checks it and flags it as failed.
+    """
+    attempts = {"n": 0}
+
     # Returns (ok, result_or_feedback). Deliberately unannotated: CrewAI inspects the return
     # annotation at runtime, and `from __future__ import annotations` turns it into a string
     # that its check rejects.
     def guardrail(output):
-        problems = campaign_problems(output.raw, segment_name)
-        if problems:
+        attempts["n"] += 1
+        problems = campaign_problems(clean_llm_markdown(output.raw), segment_name)
+        if problems and attempts["n"] <= retries:
             return False, ("Rewrite the full campaign. Fix these problems: " + "; ".join(problems)
-                           + ". Use exactly the markdown section headings requested.")
+                           + ". Use exactly the markdown headings requested.")
         return True, output.raw
     return guardrail
+
+
+def assemble_campaign(segment_name: str, brief: dict, notes: str, campaign: str, model: str) -> str:
+    """Final markdown: status header, data-rendered snapshot, model's notes, model's campaign."""
+    notes, campaign = clean_llm_markdown(notes), clean_llm_markdown(campaign)
+    problems = campaign_problems(campaign, segment_name)
+    status = ("Passed format and discount-policy checks" if not problems
+              else "**Failed checks after retries: " + "; ".join(problems) + "**")
+    return (f"# Retention campaign: {segment_name}\n\n"
+            f"_Generated {datetime.now():%Y-%m-%d %H:%M} by a local CrewAI agent "
+            f"(Ollama `{model}`). {status}. Review before sending._\n\n"
+            f"## Cohort snapshot\n\n_From the warehouse (not model-written)._\n\n"
+            f"{render_snapshot(brief)}\n\n"
+            f"## Analyst notes\n\n{notes}\n\n{campaign}\n")
 
 
 def generate_retention_campaign(segment_name: str, save: bool = True) -> str:
     """Run the crew for one segment and return the campaign markdown (also saved to campaigns/)."""
     check_ollama()
-    segment_brief(segment_name)  # validates the name and the marts before spending LLM time
+    brief = segment_brief(segment_name)  # also validates the name before spending LLM time
     result = build_crew(segment_name, build_llm()).kickoff()
-    text = str(result).strip()
-    problems = campaign_problems(text, segment_name)
-    status = ("Passed format and discount-policy checks" if not problems
-              else "**Failed checks after retries: " + "; ".join(problems) + "**")
-    header = (f"# Retention campaign: {segment_name}\n\n"
-              f"_Generated {datetime.now():%Y-%m-%d %H:%M} by a local CrewAI agent "
-              f"(Ollama `{OLLAMA_MODEL}`). {status}. Review before sending._\n\n")
-    text = header + text
+    notes, campaign = (t.raw for t in result.tasks_output)
+    text = assemble_campaign(segment_name, brief, notes, campaign, OLLAMA_MODEL)
     if save:
         CAMPAIGN_DIR.mkdir(exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", segment_name.lower()).strip("_")
         path = CAMPAIGN_DIR / f"{slug}_{datetime.now():%Y%m%d_%H%M%S}.md"
-        path.write_text(text + "\n")
+        path.write_text(text)
         log.info("Saved %s", path.relative_to(REPO_ROOT))
     return text
 

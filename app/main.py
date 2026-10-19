@@ -283,7 +283,8 @@ with tab2:
             campaign = latest.read_text()
 
     if campaign:
-        problems = ra.campaign_problems(campaign, segment)
+        # Check only the body: a failed draft's header quotes its problems verbatim.
+        problems = ra.campaign_problems(campaign.split("## Cohort snapshot", 1)[-1], segment)
         if problems:
             st.error("Guardrail: " + "; ".join(problems) + ". Regenerate or edit before sending.")
         else:

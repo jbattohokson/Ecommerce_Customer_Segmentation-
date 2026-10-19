@@ -85,15 +85,19 @@ def test_check_ollama_explains_when_server_is_down(monkeypatch):
         ra.check_ollama("llama3.1")
 
 
-GOOD_CAMPAIGN = """## Cohort snapshot
-- 1,950 customers
-## Campaign strategy
+GOOD_CAMPAIGN = """## Campaign strategy
 One-time 20% off with a 14-day expiry.
 ## Email
 Subject A: We miss you, *|FNAME|*
 Subject B: A little something for *|SHOP|*
 Preview text: 20% off for 14 days
-Dear *|FNAME|*, ...
+Dear *|FNAME|*, it has been a while since your last order, and a lot has changed in our catalogue.
+Our cake stands, retrospot baking sets and hanging heart T-light holders are back in stock in new
+colours, and they still sell well in independent gift shops ahead of the busy season. To make
+restocking easy, here is 20% off your next order for the next 14 days, with no minimum spend and
+no strings attached. Everything you need for your shelves is one click away, and our team is
+happy to help you choose bestsellers for *|SHOP|* if you reply to this email with your list.
+We would love to have you back. Shop the new ranges today before the code expires.
 ## Follow-up
 Remind non-openers after 5 days.
 """
@@ -106,19 +110,72 @@ def test_good_campaign_has_no_problems():
 def test_campaign_problems_lists_every_issue():
     bad = "**Campaign Objective:** reactivate\nSpecial discount of 30% off!"
     problems = ra.campaign_problems(bad, "Dormant Buyers")
-    assert any("Cohort snapshot" in p for p in problems)
+    assert any("Campaign strategy" in p for p in problems)
     assert any("Subject A" in p for p in problems)
     assert any("FNAME" in p for p in problems)
     assert any("[30]% off" in p and "cap is 20%" in p for p in problems)
 
 
-def test_guardrail_returns_feedback_for_retry():
+def test_guardrail_returns_feedback_then_accepts_after_retries():
     class Out:
         raw = GOOD_CAMPAIGN.replace("Subject B: A little something for *|SHOP|*\n", "")
-    ok, feedback = ra.make_campaign_guardrail("Dormant Buyers")(Out())
-    assert ok is False and "Subject B" in feedback
-    Out.raw = GOOD_CAMPAIGN
+    guard = ra.make_campaign_guardrail("Dormant Buyers", retries=2)
+    for _ in range(2):
+        ok, feedback = guard(Out())
+        assert ok is False and "Subject B" in feedback
+    # Retries exhausted: the draft is accepted so the user gets something to edit...
+    assert guard(Out()) == (True, Out.raw)
+    # ...and the assembled document flags it.
+    doc = ra.assemble_campaign("Dormant Buyers", FAKE_BRIEF, "- notes", Out.raw, "llama3.2")
+    assert "Failed checks after retries" in doc and "Subject B" in doc
+
+
+def test_good_draft_passes_guardrail_first_time():
+    class Out:
+        raw = GOOD_CAMPAIGN
     assert ra.make_campaign_guardrail("Dormant Buyers")(Out()) == (True, GOOD_CAMPAIGN)
+
+
+@pytest.mark.parametrize("heading", ["## Email", "# Email", "### email", "**Email**", "**Email:**"])
+def test_headings_are_matched_at_any_level(heading):
+    assert ra.has_heading(f"intro\n{heading}\nbody", "Email")
+
+
+def test_heading_match_ignores_inline_mentions():
+    assert not ra.has_heading("We will send an Email next week.", "Email")
+
+
+FAKE_BRIEF = {
+    "customers": 1950, "share_of_all_customers_pct": 33.4, "share_of_total_net_revenue_pct": 3.7,
+    "total_net_spend_gbp": 608954.0, "median_orders": 1.0, "median_net_spend_gbp": 267.0,
+    "avg_order_value": 250.0, "median_days_since_last_order": 402.0, "ordered_last_90d": 0.0,
+    "last_order_91_180d": 150.0, "last_order_181_365d": 600.0, "last_order_over_1y": 1200.0,
+    "avg_return_rate_pct": 1.5,
+    "top_products": [{"product": "REGENCY CAKESTAND 3 TIER", "customers_who_bought": 120, "revenue": 1.0}],
+    "top_countries": [{"country": "United Kingdom", "customers": 1800}],
+}
+
+
+def test_assembled_campaign_uses_data_snapshot_and_passes():
+    doc = ra.assemble_campaign("Dormant Buyers", FAKE_BRIEF, "- They bought once.", GOOD_CAMPAIGN, "llama3.2")
+    assert doc.startswith("# Retention campaign: Dormant Buyers")
+    assert "**1,950 customers**: 33.4% of active customers, 3.7% of net revenue" in doc
+    assert "62% over a year ago" in doc and "Regency Cakestand 3 Tier (120 buyers)" in doc
+    assert "## Analyst notes\n\n- They bought once." in doc
+    assert "Passed format and discount-policy checks" in doc
+
+
+def test_email_without_body_is_rejected():
+    no_body = GOOD_CAMPAIGN.split("Dear *|FNAME|*")[0] + "## Follow-up\nRemind them.\n"
+    problems = ra.campaign_problems(no_body, "Dormant Buyers")
+    assert any("email body has only" in p for p in problems)
+
+
+def test_clean_removes_echoed_tool_calls_and_unwraps_fences():
+    raw = ('notes\n```json\n{"name": "get_segment_brief", "parameters": {"segment_name": "x"}}\n```\n'
+           "## Email\n```markdown\nSubject A: hi\n```\n")
+    out = ra.clean_llm_markdown(raw)
+    assert "get_segment_brief" not in out and "```" not in out and "Subject A: hi" in out
 
 
 def test_crew_wiring_is_valid_without_calling_the_llm():
