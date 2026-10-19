@@ -1,0 +1,8 @@
+retail_segmentation:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Same file the loader writes raw tables into and the ML step / Streamlit app read from.
+      path: "{{ env_var('RETAIL_DB_PATH', 'retail_analytics.duckdb') }}"
+      threads: 4

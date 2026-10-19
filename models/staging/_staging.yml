@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_retail_transactions
+    description: Clean sale lines from the loader, with a calendar date added.
+    columns:
+      - name: customer_id
+        data_tests: [not_null]
+      - name: invoice_no
+        data_tests: [not_null]
+      - name: stock_code
+        data_tests: [not_null]
+      - name: quantity
+        data_tests:
+          - accepted_range: {arguments: {min_value: 1}}
+      - name: unit_price
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0.001}}
+      - name: invoice_date
+        data_tests:
+          - not_null
+          - accepted_range: {arguments: {min_value: "'2009-12-01'::date", max_value: "{{ snapshot_date() }} - 1"}}
+  - name: stg_retail_returns
+    description: Cancelled product lines by a known customer.
+    columns:
+      - name: customer_id
+        data_tests: [not_null]
+      - name: quantity
+        data_tests:
+          - accepted_range: {arguments: {max_value: -1}}

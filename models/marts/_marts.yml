@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: fct_invoice_lines
+    description: "Star-schema fact. Grain: one clean sale line."
+    columns:
+      - name: invoice_line_key
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('dim_customers'), field: customer_id}}
+      - name: stock_code
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('dim_products'), field: stock_code}}
+      - name: invoice_date
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('dim_date'), field: date_day}}
+      - name: line_total
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0.001}}
+
+  - name: dim_customers
+    description: "One row per customer with at least one clean sale."
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: country
+        data_tests: [not_null]
+      - name: cohort_month
+        data_tests: [not_null]
+
+  - name: dim_products
+    description: "One row per stock code, with the most-used description as canonical."
+    columns:
+      - name: stock_code
+        data_tests: [unique, not_null]
+      - name: description
+        data_tests: [not_null]
+
+  - name: dim_date
+    description: "Calendar spine from the first to the last sale date."
+    columns:
+      - name: date_day
+        data_tests: [unique, not_null]
+
+  - name: fct_customer_transactions
+    description: >
+      One row per customer: RFM base metrics (recency_days, frequency, monetary) plus
+      supporting behaviour columns. Input to ml/segmentation.py.
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships: {arguments: {to: ref('dim_customers'), field: customer_id}}
+      - name: recency_days
+        description: Days from last purchase date to var snapshot_date (minimum 1).
+        data_tests:
+          - not_null
+          - accepted_range: {arguments: {min_value: 1, max_value: 740}}
+      - name: frequency
+        description: Distinct sale invoices.
+        data_tests:
+          - not_null
+          - accepted_range: {arguments: {min_value: 1}}
+      - name: gross_spend
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0.001}}
+      - name: monetary
+        description: Net spend (gross minus returns). Can be <= 0 when a customer returned everything.
+        data_tests: [not_null]
+      - name: return_rate
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0}}
+
+  - name: agg_monthly_sales
+    description: "One row per month: revenue, orders, active/new customers (sales velocity)."
+    columns:
+      - name: month_start
+        data_tests: [unique, not_null]

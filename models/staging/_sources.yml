@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Tables written by pipelines/load_to_duckdb.py (DuckDB's default `main` schema).
+    schema: main
+    tables:
+      - name: raw_transactions
+        description: Clean sale lines (product codes only, known customer, quantity > 0, price > 0).
+      - name: raw_returns
+        description: Cancelled ('C') product lines by a known customer. Quantity and line_total are negative.
+      - name: audit_load_summary
+        description: Row counts per destination and reject reason from the last load.

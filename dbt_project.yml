@@ -1,0 +1,26 @@
+name: retail_segmentation
+version: "1.0.0"
+config-version: 2
+profile: retail_segmentation
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+# Singular dbt tests live in data_tests/ so they don't collide with the pytest suite in tests/.
+test-paths: ["data_tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # RFM "today": the day after the last invoice in the UCI data (2011-12-09 12:50).
+  # Recency = days from a customer's last purchase date to this date, so a purchase on the
+  # final day has recency 1, not 0 (the usual RFM convention).
+  snapshot_date: "2011-12-10"
+
+models:
+  retail_segmentation:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
