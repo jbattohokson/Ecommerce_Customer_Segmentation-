@@ -98,7 +98,7 @@ Python (pandas, NumPy, scikit-learn, SciPy), DuckDB, dbt-duckdb, SQL, Streamlit,
 
 ## Testing status (2026-10-19)
 
-- **pytest:** 86 tests, all passing.
+- **pytest:** 88 tests, all passing.
   - Unit tests:
     - 10 for the loader, on a hand-built CSV where each line trips exactly one rule. Covers row conservation, the cross-file overlap, Online Retail I header names, and rollback leaving the previous load intact.
     - 11 for segmentation, on synthetic data with known personas. Covers >98% persona recovery, unique names, deterministic fits, the stored model reproducing the fit labels, and net returners being excluded.

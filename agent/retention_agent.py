@@ -252,10 +252,12 @@ def build_crew(segment_name: str, llm: LLM) -> Crew:
     return Crew(agents=[analyst], tasks=[analysis, campaign], process=Process.sequential, verbose=False)
 
 
-# "15% off", "15 % discount", "discount of 15%", "save 15%". Plain percentages elsewhere
-# (e.g. "16.4% of revenue" in the snapshot) are data, not offers, and are ignored.
+# "15% off", "15 % discount", "15 percent off", "discount of 15%", "save 15%". Plain percentages
+# elsewhere (e.g. "16.4% of revenue" in the snapshot) are data, not offers, and are ignored.
+# The (?<![\d.]) and 3-digit limit stop "100% off" being read as "00% off" and slipping under the cap.
+_PCT = r"(?<![\d.])(\d{1,3})\s?(?:%|percent\b)"
 OFFER_PCT = re.compile(
-    r"(\d{1,2})\s?%\s*(?:off|discount)|(?:discount|save|saving)\s+(?:of\s+|up to\s+)?(\d{1,2})\s?%",
+    _PCT + r"\s*(?:off|discount)|(?:discount|save|saving)\s+(?:of\s+|up to\s+)?" + _PCT,
     re.IGNORECASE)
 
 
@@ -393,7 +395,7 @@ def generate_retention_campaign(segment_name: str, save: bool = True) -> str:
         CAMPAIGN_DIR.mkdir(exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "_", segment_name.lower()).strip("_")
         path = CAMPAIGN_DIR / f"{slug}_{datetime.now():%Y%m%d_%H%M%S}.md"
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
         log.info("Saved %s", path.relative_to(REPO_ROOT))
     return text
 
