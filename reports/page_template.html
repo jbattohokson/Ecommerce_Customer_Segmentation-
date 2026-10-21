@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Commerce Customer Segmentation</title>
+<style>
+  :root{--ink:#0f1117;--ink-light:#4a4f5e;--border:#dde1ea;--bg:#f7f8fc;--white:#ffffff;--accent:#1a56db;--accent-dim:#e8eefb;--warn:#c0392b;--warn-dim:#fdf0ee;--green:#1a7f4b;--green-dim:#eaf5ef;--amber:#b45309;--amber-dim:#fef3e2;--mono:'Courier New',Courier,monospace}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Georgia',serif;font-size:16px;line-height:1.7;color:var(--ink);background:var(--bg)}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  .page-wrap{max-width:860px;margin:0 auto;padding:0 24px 80px}
+  header{background:#0f1117;color:var(--white);padding:56px 0 44px}
+  header .page-wrap{padding-top:0;padding-bottom:0}
+  .eyebrow{font-family:'Arial',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8b93a8;margin-bottom:14px}
+  h1{font-size:clamp(24px,4vw,38px);font-weight:normal;line-height:1.2;letter-spacing:-.02em;margin-bottom:18px}
+  h1 em{font-style:italic;color:#8b93a8}
+  .meta{font-family:'Arial',sans-serif;font-size:13px;color:#8b93a8;display:flex;flex-wrap:wrap;gap:20px}
+  .meta span::before{content:'· '}
+  .sticky-nav{position:sticky;top:0;background:var(--white);border-bottom:1px solid var(--border);z-index:100;padding:10px 0}
+  .sticky-nav .page-wrap{display:flex;gap:24px;flex-wrap:wrap;padding-top:0;padding-bottom:0}
+  .sticky-nav a{font-family:'Arial',sans-serif;font-size:12.5px;color:var(--ink-light);font-weight:500}
+  .sticky-nav a:hover{color:var(--accent);text-decoration:none}
+  .exec-summary{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--accent);padding:28px 32px;margin:40px 0 48px;border-radius:0 6px 6px 0}
+  .exec-summary h2{font-family:'Arial',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+  .exec-summary p{font-size:15.5px;margin-bottom:10px}
+  .exec-summary p:last-child{margin-bottom:0}
+  .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:16px;margin-bottom:56px}
+  .kpi{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px 18px;text-align:center}
+  .kpi .num{font-size:26px;font-weight:700;font-family:'Arial',sans-serif;letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+  .kpi .num.warn{color:var(--warn)}.kpi .num.good{color:var(--green)}.kpi .num.amber{color:var(--amber)}.kpi .num.blue{color:var(--accent)}
+  .kpi .label{font-family:'Arial',sans-serif;font-size:11.5px;color:var(--ink-light);line-height:1.4}
+  .section{margin-bottom:56px}
+  .section-label{font-family:'Arial',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
+  h2.section-title{font-size:22px;font-weight:normal;letter-spacing:-.01em;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .finding{background:var(--white);border:1px solid var(--border);border-radius:8px;margin-bottom:20px;overflow:hidden}
+  .finding-header{display:flex;align-items:flex-start;gap:16px;padding:22px 24px 18px;border-bottom:1px solid var(--border)}
+  .finding-number{font-family:'Arial',sans-serif;font-size:11px;font-weight:700;color:var(--white);background:var(--ink);border-radius:4px;padding:3px 7px;flex-shrink:0;margin-top:2px}
+  .finding-title{font-size:16.5px;font-weight:normal;line-height:1.35}
+  .finding-body{padding:20px 24px}
+  .finding-body p{font-size:14.5px;margin-bottom:12px}
+  .finding-body p:last-child{margin-bottom:0}
+  .finding-body img{width:100%;height:auto;border:1px solid var(--border);border-radius:6px;margin:6px 0 14px;background:#fff}
+  .impact-block{border-radius:6px;padding:16px 18px;margin-top:14px;margin-bottom:14px}
+  .impact-block.red{background:var(--warn-dim);border-left:3px solid var(--warn)}
+  .impact-block.green{background:var(--green-dim);border-left:3px solid var(--green)}
+  .impact-block.amber{background:var(--amber-dim);border-left:3px solid var(--amber)}
+  .impact-block.blue{background:var(--accent-dim);border-left:3px solid var(--accent)}
+  .impact-label{font-family:'Arial',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .impact-block.red .impact-label{color:var(--warn)}.impact-block.green .impact-label{color:var(--green)}
+  .impact-block.amber .impact-label{color:var(--amber)}.impact-block.blue .impact-label{color:var(--accent)}
+  .impact-block p{font-size:14px;line-height:1.6;margin:0}
+  .data-table-wrap{overflow-x:auto;margin:16px 0}
+  table{width:100%;border-collapse:collapse;font-family:'Arial',sans-serif;font-size:13px}
+  th{background:var(--ink);color:var(--white);text-align:left;padding:9px 12px;font-weight:600;font-size:12px;letter-spacing:.04em}
+  td{padding:9px 12px;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  tr:nth-child(even) td{background:var(--bg)}
+  .neg{color:var(--warn);font-weight:700}.pos{color:var(--green);font-weight:700}
+  .rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .rec-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px}
+  .rec-priority{font-family:'Arial',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+  .rec-priority.p1{color:var(--warn)}.rec-priority.p2{color:var(--amber)}.rec-priority.p3{color:var(--accent)}
+  .rec-card h3{font-size:15px;font-weight:normal;margin-bottom:10px;line-height:1.3}
+  .rec-card p{font-size:13.5px;color:var(--ink-light);line-height:1.6;margin-bottom:10px}
+  .rec-card p:last-child{margin-bottom:0}
+  .rec-impact{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--ink);margin-top:10px}
+  pre{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow-x:auto;line-height:1.55;white-space:pre-wrap}
+  footer{border-top:1px solid var(--border);padding-top:28px;margin-top:64px;font-family:'Arial',sans-serif;font-size:12.5px;color:var(--ink-light);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+  @media print{.kpi,.rec-card,.impact-block,img,tr,.exec-summary{break-inside:avoid}.finding-header{break-after:avoid}}
+  @media(max-width:600px){.exec-summary{padding:20px 18px}.finding-header,.finding-body{padding:16px}}
+  .model-stat{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:4px 10px;margin:3px 4px 3px 0}
+</style>
+</head>
+<body>
+<header><div class="page-wrap"><p class="eyebrow">Retail Analytics · Customer Segmentation</p>
+<h1>One in five customers brings in three-quarters of the revenue.<br><em>£3.29M of lifetime value is drifting away.</em></h1>
+<div class="meta"><span>Julian Batto-Hokson</span><span>UCI Online Retail II · 1.07M invoice lines · Dec 2009 to Dec 2011</span><span>Python · SQL · dbt · DuckDB · scikit-learn · CrewAI</span><span>October 2026</span></div></div></header>
+<nav class="sticky-nav"><div class="page-wrap"><a href="#summary">Summary</a><a href="#findings">Findings</a><a href="#model">Model</a><a href="#agent">AI Campaigns</a><a href="#nextsteps">Next Steps</a><a href="#data">Data</a></div></nav>
+<div class="page-wrap">
+
+<div class="status-banner" style="margin-top:32px;background:var(--amber-dim);border:1px solid var(--amber);border-radius:6px;padding:14px 18px;font-family:Arial,sans-serif;font-size:13px;color:var(--amber)"><strong>Scope note:</strong> this is real transaction data from a UK online giftware retailer, many of whose customers are wholesalers. 21.8% of invoice lines have no customer ID (mostly guest checkouts), so the segments describe registered customers, and revenue figures here are registered-customer revenue, not total company revenue.</div>
+<section id="summary" class="exec-summary">
+  <h2>Executive Summary</h2>
+  <p>I cleaned and loaded 1.07M raw invoice lines into DuckDB, modeled them with dbt into a star schema, and segmented the 5,832 active registered customers on recency, frequency and spend (RFM) with K-Means. A local AI agent drafts retention emails for the segments at risk, and a weekly GitHub Actions job rebuilds everything and emails an alert if a check fails.</p>
+  <p>Revenue is concentrated: 1,189 "Loyal Champions" (20% of customers) account for 73.6% of net revenue. Two segments are slipping away: 1,440 At-Risk Whales (median 184.5 days since their last order, £2.68M lifetime) and 1,950 Dormant Buyers (median 402 days, £0.61M).</p>
+  <p>Champions lapse fast. If no one ordered for 90 days, the trained model would re-score 537 of the 1,189 Champions as At-Risk Whales. A retention program has to watch Champions' recency, not just customers who have already gone quiet.</p>
+</section>
+<div class="kpi-strip"><div class="kpi"><div class="num blue">5,832</div><div class="label">Active registered customers segmented</div></div><div class="kpi"><div class="num good">73.6%</div><div class="label">Net revenue from Loyal Champions (20% of customers)</div></div><div class="kpi"><div class="num warn">£3.29M</div><div class="label">Lifetime value in the two churn-risk segments</div></div><div class="kpi"><div class="num amber">537</div><div class="label">Champions re-scored At-Risk after 90 days without orders</div></div><div class="kpi"><div class="num warn">-2.0%</div><div class="label">Net revenue, last 12 full months vs prior 12</div></div><div class="kpi"><div class="num blue">0.363</div><div class="label">Silhouette, k = 4 on log-scaled RFM</div></div></div>
+
+<section id="findings" class="section">
+  <p class="section-label">Analysis</p>
+  <h2 class="section-title">What the data shows</h2>
+
+  <div class="finding"><div class="finding-header"><span class="finding-number">01</span><span class="finding-title">Revenue depends on 1,189 customers</span></div><div class="finding-body">
+  <img src="outputs/chart1_customer_vs_revenue_share.png" alt="Customer share vs revenue share by segment">
+  <div class="data-table-wrap"><table><thead><tr><th>Segment</th><th>Customers</th><th>Median days since last order</th><th>Median orders</th><th>Median net spend</th><th>Share of net revenue</th></tr></thead><tbody>
+  <tr><td>Loyal Champions</td><td>1,189</td><td>17</td><td>13</td><td>£4,809</td><td><span class="pos">73.6%</span></td></tr>
+  <tr><td>Recent Newcomers</td><td>1,253</td><td>24</td><td>3</td><td>£705</td><td>6.3%</td></tr>
+  <tr><td>At-Risk Whales</td><td>1,440</td><td>184.5</td><td>4.5</td><td>£1,432</td><td><span class="neg">16.4%</span></td></tr>
+  <tr><td>Dormant Buyers</td><td>1,950</td><td>402</td><td>1</td><td>£267</td><td><span class="neg">3.7%</span></td></tr>
+  </tbody></table></div>
+  <div class="impact-block green"><p class="impact-label">Interpretation</p><p>Losing a few dozen Champions costs more than losing every Dormant Buyer. Retention spend should follow value: perks for Champions and Whales, low-cost reactivation for Dormant Buyers.</p></div>
+  </div></div>
+
+  <div class="finding"><div class="finding-header"><span class="finding-number">02</span><span class="finding-title">The segments separate cleanly on recency and spend</span></div><div class="finding-body">
+  <img src="outputs/chart2_rfm_segments.png" alt="RFM scatter by segment">
+  <p>Champions sit top-left (recent, high spend). Newcomers are recent but low spend. Most Whales (the middle 90%) have gone 51 to 513 days without an order, at mid-to-high spend. Dormant Buyers are mostly (69%) one-time, low-spend buyers, with a median of 402 days since their last order.</p>
+  <div class="impact-block amber"><p class="impact-label">"Whale" is relative</p><p>At-Risk Whales have a median net spend of £1,432. That's above this customer base's median, but most of the very largest accounts are Champions. The persona names describe position, the medians describe size.</p></div>
+  </div></div>
+
+  <div class="finding"><div class="finding-header"><span class="finding-number">03</span><span class="finding-title">Revenue is seasonal and slightly down year over year</span></div><div class="finding-body">
+  <img src="outputs/chart3_monthly_net_revenue.png" alt="Monthly net revenue">
+  <p>Net revenue peaks in October and November ahead of Christmas in both years (November 2010: £1.12M; November 2011: £1.11M). The last 12 full months (Dec 2010 to Nov 2011) came to £7.93M, down 2.0% from £8.09M in the prior 12. December 2011 is partial (data ends 2011-12-09) and is excluded.</p>
+  <div class="impact-block blue"><p class="impact-label">Timing</p><p>Win-back campaigns for lapsed accounts have the most to gain if they land before the September ramp, when buyers plan holiday stock.</p></div>
+  </div></div>
+
+  <div class="finding"><div class="finding-header"><span class="finding-number">04</span><span class="finding-title">Best sellers are cheap, high-volume gift items</span></div><div class="finding-body">
+  <img src="outputs/chart5_top_products.png" alt="Top 10 products by net revenue">
+  <p>The Regency cakestand (£261k net, 1,314 customers) and the white hanging heart T-light holder (£238k, 1,490 customers) lead. Products are ranked net of returns: the raw data contains single orders of 80,995 and 74,215 units that were cancelled in full, and ranking by gross revenue would put one of them in the top three.</p>
+  </div></div>
+
+  <div class="finding"><div class="finding-header"><span class="finding-number">05</span><span class="finding-title">The UK is 84% of revenue, and a handful of overseas accounts are huge</span></div><div class="finding-body">
+  <div class="data-table-wrap"><table><thead><tr><th>Country</th><th>Customers</th><th>Net revenue</th><th>Share</th></tr></thead><tbody>
+  <tr><td>United Kingdom</td><td>5,334</td><td>£13.66M</td><td>83.5%</td></tr>
+  <tr><td>EIRE (Ireland)</td><td>3</td><td>£0.57M</td><td>3.5%</td></tr>
+  <tr><td>Netherlands</td><td>22</td><td>£0.55M</td><td>3.3%</td></tr>
+  <tr><td>Germany</td><td>106</td><td>£0.37M</td><td>2.3%</td></tr>
+  <tr><td>France</td><td>93</td><td>£0.29M</td><td>1.8%</td></tr>
+  </tbody></table></div>
+  <p>Three Irish accounts spend more than 106 German ones combined. These are wholesalers, which is also why spend is so skewed (max £578k against an £840 median) and why the model log-transforms RFM. Full table: <code>outputs/revenue_by_country.csv</code>, 41 countries.</p>
+  </div></div>
+</section>
+
+<section id="model" class="section">
+  <p class="section-label">Model</p>
+  <h2 class="section-title">Why k = 4, and why the silhouette is "only" 0.363</h2>
+  <img src="outputs/chart4_k_selection.png" alt="Silhouette by k" style="width:100%;border:1px solid var(--border);border-radius:6px;background:#fff;margin-bottom:14px">
+  <p style="font-size:15px;margin-bottom:12px">RFM is log-transformed and standardized, then K-Means picks k from 4 to 6 by silhouette. k = 2 scores higher (0.44) but can't support four distinct campaigns. On raw (unlogged) values K-Means scores 0.59 at k = 4, but only by putting 4 and 37 wholesale accounts in clusters of their own. The log-scale solution gives four balanced clusters (1,189 to 1,950 customers) a marketer can act on. Clusters are named by matching centroids to persona prototypes with the Hungarian algorithm, so names don't depend on K-Means' random cluster IDs.</p>
+  <span class="model-stat">k = 4</span><span class="model-stat">silhouette 0.363</span><span class="model-stat">5,832 customers</span><span class="model-stat">3 runs byte-identical</span>
+</section>
+
+<section id="agent" class="section">
+  <p class="section-label">Local AI</p>
+  <h2 class="section-title">Retention emails drafted by a free local model</h2>
+  <p style="font-size:15px;margin-bottom:12px">A CrewAI agent on Ollama (llama3.2, 3B) drafts a campaign per at-risk segment: strategy, A/B subject lines, email body and follow-up. Facts and copy are kept apart on purpose. The cohort snapshot at the top of each draft is rendered from SQL, so the model can't misquote the numbers, and a guardrail checks structure, the merge field and a per-segment discount cap (15% for Whales, 20% for Dormant) before a draft is accepted.</p>
+  <div class="impact-block blue"><p class="impact-label">Real output, unedited</p><p>Both at-risk drafts in <code>campaigns/samples/</code> passed the guardrail on the first attempt. The Whales draft offers a VIP perk (free shipping on the next 3 orders) with no discount, which is what the policy asks for. The model still slips: it suggests sending "7-10 days after the last order" to customers whose median gap is 184 days, and the Dormant follow-up invents a phone number. That's why every draft is labeled "Review before sending".</p></div>
+</section>
+
+<section id="nextsteps" class="section">
+  <p class="section-label">Next Steps</p>
+  <h2 class="section-title">What I'd recommend</h2>
+  <div class="rec-grid">
+    <div class="rec-card"><p class="rec-priority p1">Retention</p><h3>Trigger an alert when a Champion passes 60 days without an order</h3><p>Champions' median gap is 17 days. Waiting until they look like Whales means acting after 537 of them have already drifted.</p><div class="rec-impact">Weekly list: Champions with recency over 60 days</div></div>
+    <div class="rec-card"><p class="rec-priority p1">Win-back</p><h3>VIP perks for Whales before discounts</h3><p>They already spend £1,432 at the median. A perk protects margin; test it against a 10% code with a holdout group.</p><div class="rec-impact">Measure: 90-day reorder rate, perk vs discount vs holdout</div></div>
+    <div class="rec-card"><p class="rec-priority p2">Data</p><h3>Capture customer IDs at guest checkout</h3><p>21.8% of lines can't be tied to a customer, so they can't be segmented or retained.</p><div class="rec-impact">Target: under 10% unattributed lines</div></div>
+  </div>
+</section>
+
+<section id="data" class="section">
+  <p class="section-label">Technical Reference</p>
+  <h2 class="section-title">Data and pipeline</h2>
+  <div class="data-table-wrap"><table><thead><tr><th>Dimension</th><th>Value</th></tr></thead><tbody>
+  <tr><td>Source</td><td><a href="https://archive.ics.uci.edu/dataset/502/online+retail+ii">UCI Online Retail II</a> (CC BY 4.0), downloaded at build time</td></tr>
+  <tr><td>Rows</td><td>1,067,371 raw lines → 776,579 clean sale lines and 17,586 returns; every other row kept in an audit table with a reason</td></tr>
+  <tr><td>Cleaning</td><td>9-day overlap between the two source sheets removed (22,523 rows that would double-count), duplicates, bad-debt adjustments, non-product codes, missing IDs</td></tr>
+  <tr><td>Snapshot</td><td>Recency measured from 2011-12-10, the day after the last invoice</td></tr>
+  <tr><td>Testing</td><td>51 dbt checks; 86 pytest tests including 30 health checks on the real warehouse; weekly rebuild in GitHub Actions with an email alert on failure</td></tr>
+  <tr><td>Tools</td><td>Python (pandas, NumPy, scikit-learn, SciPy), SQL, dbt-duckdb, DuckDB, Streamlit, Plotly, Matplotlib, CrewAI, Ollama, GitHub Actions</td></tr>
+  </tbody></table></div>
+</section>
+</div>
+<footer style="max-width:860px;margin:0 auto;padding:0 24px 48px"><span>Julian Batto-Hokson · October 2026</span><span><a href="https://github.com/jbattohokson/Ecommerce_Customer_Segmentation-">GitHub Repository</a> · dbt · scikit-learn · CrewAI</span></footer>
+</body></html>

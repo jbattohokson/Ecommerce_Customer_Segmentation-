@@ -76,6 +76,19 @@ ollama pull llama3.1
 
 To test the message locally without sending anything: `python pipelines/notify_failure.py --message "test" --dry-run`.
 
+## Portfolio outputs
+
+- **`Ecommerce_Customer_Segmentation_Analysis.html`**: the write-up, a single self-contained page (charts embedded) with findings, recommendations and data scope. `docs/Ecommerce_Customer_Segmentation_Analysis_Report.pdf` is the same page as a PDF.
+- `outputs/`: 5 charts (PNG) and 5 summary tables (CSV): segment profiles, monthly sales, k diagnostics, top 25 products by net revenue and revenue by country, all written by `reports/make_outputs.py` from the marts.
+- `dashboard/`: screenshots of the three Streamlit tabs (PNG, plus one combined PDF).
+
+Rebuild them after `dbt build`:
+
+```bash
+.venv/bin/python reports/make_outputs.py
+CHROMIUM_PATH=/path/to/chrome .venv/bin/python reports/build_page.py --name Ecommerce_Customer_Segmentation_Analysis   # or `playwright install chromium` and drop CHROMIUM_PATH
+```
+
 ## Tools
 
 Python (pandas, NumPy, scikit-learn, SciPy), DuckDB, dbt-duckdb, SQL, Streamlit, Plotly, CrewAI, Ollama (llama3.1 / llama3.2), pytest, GitHub Actions, smtplib.

@@ -1,0 +1,5 @@
+segment_name,is_churn_risk,customers,median_recency_days,median_frequency,median_monetary,mean_monetary,total_monetary,customer_share,revenue_share
+Loyal Champions,False,1189,17.0,13.0,4808.94,10133.7985,12049086.4,0.2039,0.7364
+Recent Newcomers,False,1253,24.0,3.0,705.12,818.321,1025356.22,0.2148,0.0627
+At-Risk Whales,True,1440,184.5,4.5,1432.425,1859.8532,2678188.61,0.2469,0.1637
+Dormant Buyers,True,1950,402.0,1.0,266.52,312.2839,608953.65,0.3344,0.0372
