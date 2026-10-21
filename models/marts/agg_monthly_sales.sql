@@ -39,8 +39,9 @@ select
     m.active_customers - coalesce(n.new_customers, 0)   as returning_customers,
     m.units_sold,
     round(m.gross_revenue / m.orders, 2)                as avg_order_value,
+    -- Partial if the last data day (snapshot - 1) falls before the month's final day.
     m.month_start = (select max(month_start) from monthly)
-        and day({{ snapshot_date() }} - 1) < 28         as is_partial_month
+        and {{ snapshot_date() }} - 1 < last_day(m.month_start) as is_partial_month
 from monthly m
 left join returns r using (month_start)
 left join new_customers n using (month_start)

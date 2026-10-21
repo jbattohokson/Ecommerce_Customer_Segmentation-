@@ -186,7 +186,8 @@ def relabel_by_display_order(km: KMeans, names: list[str]) -> tuple[np.ndarray, 
 def fit_segment_model(rfm: pd.DataFrame, k: int | None = None) -> tuple[SegmentModel, np.ndarray, pd.DataFrame]:
     """Fit the full model. Returns (model, cluster id per row of rfm, k diagnostics)."""
     z, scaler = scale_features(rfm)
-    diagnostics = evaluate_k(z)
+    # A forced k outside DIAGNOSTIC_K still needs its own row, or there's no "chosen" row to report.
+    diagnostics = evaluate_k(z, sorted(set(DIAGNOSTIC_K) | ({k} if k else set())))
     chosen = k or choose_k(diagnostics)
     diagnostics["is_chosen"] = diagnostics["k"] == chosen
     km = fit_kmeans(z, chosen)
@@ -300,6 +301,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db-path", type=Path, default=DB_PATH)
     parser.add_argument("--k", type=int, default=None, help="force the number of clusters")
     args = parser.parse_args(argv)
+    if args.k is not None and args.k < 2:
+        parser.error("--k must be at least 2")
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
         run_rfm_clustering(args.db_path, args.k)

@@ -102,8 +102,9 @@ def stage_raw_files(conn: duckdb.DuckDBPyConnection, files: list[Path]) -> int:
         cols = ", ".join(f'"{mapped[c]}" AS {c}' for c in REQUIRED_COLUMNS)
         # Path goes in as a SQL literal because DuckDB can't bind parameters inside a UNION view.
         literal = str(path).replace("'", "''")
+        name_literal = path.name.replace("'", "''")
         selects.append(
-            f"SELECT {file_idx} AS file_idx, '{path.name}' AS source_file, "
+            f"SELECT {file_idx} AS file_idx, '{name_literal}' AS source_file, "
             f"row_number() OVER () AS source_line, {cols} "
             f"FROM read_csv('{literal}', all_varchar=true, header=true)")
     conn.execute("CREATE OR REPLACE TEMP TABLE _raw AS " + " UNION ALL ".join(selects))

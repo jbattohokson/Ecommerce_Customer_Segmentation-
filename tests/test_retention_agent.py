@@ -54,6 +54,8 @@ def test_tool_tolerates_quoted_names():
     ("Enjoy 25% off your next order", [25]),
     ("a discount of 30% today", [30]),
     ("save up to 40%!", [40]),
+    ("Take 100% off a sample pack", [100]),
+    ("25 percent off this week", [25]),
     ("This segment is 16.4% of revenue and 24% of customers", []),  # data, not offers
 ])
 def test_discount_guardrail_for_at_risk_whales(text, expected):
