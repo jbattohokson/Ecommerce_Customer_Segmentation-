@@ -141,6 +141,10 @@ Python (pandas, NumPy, scikit-learn, SciPy), DuckDB, dbt-duckdb, SQL, Streamlit,
 
 `data/raw/*.csv` (93 MB), `*.duckdb`, `campaigns/*.md` and `health_logs/` are gitignored. The raw data is re-downloaded from UCI by `fetch_data.py` (and cached in CI), and everything downstream is rebuilt deterministically from it, so nothing is lost by excluding them. A few example agent outputs are committed under `campaigns/samples/`. No secrets live in the repo: the Gmail credentials exist only as GitHub Actions secrets, and the local LLM needs none.
 
+## About
+
+Customer segmentation & retention engine built on 1.07M real UCI Online Retail II invoice lines. A DuckDB + dbt star schema feeds K-Means RFM segments (1,189 customers drive 73.6% of net revenue), a local CrewAI agent drafts win-back campaigns, and a Streamlit app ties it together. Python · SQL · dbt.
+
 ## License
 
 Code: MIT (see `LICENSE`). Data: the [UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii) dataset (CC BY 4.0), downloaded at build time and not committed.
