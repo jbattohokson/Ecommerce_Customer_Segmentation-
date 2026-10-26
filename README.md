@@ -31,7 +31,7 @@ This project is an end-to-end retention system built on real transactions from a
    - `fct_customer_transactions`: one row per customer with **recency_days, frequency (distinct orders), monetary (net of returns)**, plus AOV, return rate and tenure.
    - `agg_monthly_sales`: the sales-velocity series.
 
-   51 dbt tests, including four reconciliation checks in `data_tests/`.
+   43 dbt tests, including four reconciliation checks in `data_tests/`.
 4. **Segment (scikit-learn):** `ml/segmentation.py` log1p-transforms RFM, applies `StandardScaler`, and picks k from {4, 5, 6} by silhouette (it chooses k = 4). It names clusters by matching each centroid to a persona prototype in (recency, value) space using the Hungarian algorithm. It writes `marts.dim_customer_segments` plus segment profiles, k diagnostics, and the scaler and centroids, so the app can re-score what-if data without a pickled model.
 5. **Local AI agent:** `agent/retention_agent.py` runs a CrewAI "Lifecycle Marketing Analyst" on Ollama in two tasks:
    1. Call the `@tool`s, which run fixed, read-only SQL against DuckDB (cohort size, RFM medians, revenue share, top products, countries, recency bands), and write analyst notes on why the cohort is drifting and what will resonate.
